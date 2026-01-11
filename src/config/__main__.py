@@ -1,5 +1,5 @@
 """
-設定モジュールのCLIエントリーポイント
+設定モジュールのCLIエントリーポイント.
 
 使用方法:
     python -m src.config
@@ -8,12 +8,11 @@
 import argparse
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """メインエントリーポイント"""
+def main() -> None:
+    """メインエントリーポイント."""
     parser = argparse.ArgumentParser(
         prog="python -m src.config",
         description="設定情報の表示",
@@ -21,28 +20,19 @@ def main():
     )
 
     parser.add_argument(
-        "--show-locations",
-        action="store_true",
-        help="登録済み地点の座標を表示"
+        "--show-locations", action="store_true", help="登録済み地点の座標を表示"
     )
     parser.add_argument(
-        "--show-fog-presets",
-        action="store_true",
-        help="フォグプリセットを表示"
+        "--show-fog-presets", action="store_true", help="フォグプリセットを表示"
     )
-    parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="詳細な出力"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="詳細な出力")
 
     args = parser.parse_args()
 
     # ログレベルの設定
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
-        level=log_level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
     logger.info("設定モジュール")
@@ -61,7 +51,9 @@ def main():
 
     if not args.show_locations and not args.show_fog_presets:
         logger.warning("[スタブ] 設定情報は未実装です")
-        logger.info("オプションを指定してください: --show-locations, --show-fog-presets")
+        logger.info(
+            "オプションを指定してください: --show-locations, --show-fog-presets"
+        )
 
 
 if __name__ == "__main__":

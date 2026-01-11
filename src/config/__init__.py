@@ -1,10 +1,10 @@
 """
-設定モジュール
+設定モジュール.
 
 座標定義とレンダリング設定を管理します。
 """
 
-from .locations import SOLACITY, FUJI, TSUKUBA
-from .rendering import FOG_PRESETS, CAMERA_SETTINGS
+from .locations import FUJI, SOLACITY, TSUKUBA
+from .rendering import CAMERA_SETTINGS, FOG_PRESETS
 
-__all__ = ["SOLACITY", "FUJI", "TSUKUBA", "FOG_PRESETS", "CAMERA_SETTINGS"]
+__all__ = ["CAMERA_SETTINGS", "FOG_PRESETS", "FUJI", "SOLACITY", "TSUKUBA"]
