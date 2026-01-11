@@ -270,26 +270,30 @@ def visualize_buildings(
         # 建物の高さを10倍に誇張しているので、カメラの高さも調整
         solacity_pos = np.array([3566615.0, 13972468.0, 700.0])  # 21階×10 = 約700m
 
+        # カメラを建物の中（低い位置）に配置して、建物の間から富士山を見上げる構図
+        camera_offset = np.array([-500.0, 500.0, -200.0])  # 低めの位置
+        camera_pos = solacity_pos + camera_offset
+
         plotter.camera_position = [
-            solacity_pos.tolist(),  # カメラ位置（ソラシティ21階相当）
+            camera_pos.tolist(),  # カメラ位置
             fuji_point.tolist(),  # 富士山を注視
             (0, 0, 1),  # 上方向
         ]
 
-        # 視野角を調整
-        plotter.camera.view_angle = 60.0  # 適度な広角
+        # 視野角をさらに狭めて望遠レンズのように
+        plotter.camera.view_angle = 20.0  # より望遠
 
-        # クリッピング範囲を設定（手前1mから200kmまで表示）
-        plotter.camera.clipping_range = (1, 200000)
+        # クリッピング範囲を設定（手前の建物から遠くの富士山まで）
+        plotter.camera.clipping_range = (50, 200000)
 
-        logger.info("カメラ視点: 御茶ノ水ソラシティ21階（誇張後700m）から富士山を望む")
+        logger.info("カメラ視点: 建物の間から富士山を見上げる（望遠レンズ）")
         logger.info(
-            f"  カメラ位置: X={solacity_pos[0]:.0f}, Y={solacity_pos[1]:.0f}, Z={solacity_pos[2]:.0f}m"
+            f"  カメラ位置: X={camera_pos[0]:.0f}, Y={camera_pos[1]:.0f}, Z={camera_pos[2]:.0f}m"
         )
         logger.info(
             f"  注視点: 富士山 (約{np.linalg.norm(fuji_point - solacity_pos) / 1000:.0f}km先)"
         )
-        logger.info(f"  視野角: 60度、クリッピング範囲: 1m〜200km")
+        logger.info(f"  視野角: 20度（望遠レンズ）、クリッピング範囲: 50m〜200km")
     elif terrain is not None:
         # 地形がある場合は広域表示
         center = terrain.center
