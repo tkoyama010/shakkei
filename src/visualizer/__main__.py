@@ -224,10 +224,11 @@ def visualize_buildings(
     fuji_point = None
     if terrain is not None:
         logger.info("地形データを追加...")
-        # 地形は茶色系で表示（富士山を強調）
+        # 地形はterrainカラーマップで標高を色分け
         plotter.add_mesh(
             terrain,
-            cmap="gist_earth",  # 茶色〜緑の地形カラーマップ
+            scalars=terrain.points[:, 2],  # Z座標（標高）をスカラー値として使用
+            cmap="terrain",  # terrainカラーマップ（青→緑→黄→茶）
             opacity=0.8,
             show_edges=False,
             show_scalar_bar=True,
@@ -254,46 +255,52 @@ def visualize_buildings(
             shadow=True,
         )
 
-    # 建物を追加（青灰色で表示、地形と差別化）
+    # 建物を追加（黄色で表示、地形と明確に差別化）
     plotter.add_mesh(
         buildings,
-        color="steelblue",  # 青灰色
-        show_edges=True,
-        edge_color="navy",
-        line_width=0.3,
+        color="yellow",  # 明るい黄色
+        show_edges=False,
         opacity=1.0,
     )
 
     # カメラ設定
     if terrain is not None and fuji_point is not None:
-        # ソラシティ21階から富士山を望む視点
-        # 建物の高さを10倍に誇張しているので、カメラの高さも調整
-        solacity_pos = np.array([3566615.0, 13972468.0, 700.0])  # 21階×10 = 約700m
+        # 建物と富士山の両方が見える視点を設定
+        solacity_pos = np.array([3566615.0, 13972468.0, 700.0])  # ソラシティ位置
 
-        # カメラを建物の中（低い位置）に配置して、建物の間から富士山を見上げる構図
-        camera_offset = np.array([-500.0, 500.0, -200.0])  # 低めの位置
-        camera_pos = solacity_pos + camera_offset
+        # 建物と富士山の中心をnumpy配列で取得
+        fuji_center = np.array(terrain.center)
+        bldg_center = np.array(buildings.center)
+
+        # 富士山と建物の距離を計算
+        distance = np.linalg.norm(fuji_center - bldg_center)
+        logger.info(f"富士山と建物の距離: {distance / 1000:.1f}km")
+
+        # 建物の背後（北東側）からカメラを配置
+        # 建物が手前、富士山が奥に見える構図
+        camera_pos = bldg_center + np.array([15000, 15000, 5000])
+
+        # 中間点を注視
+        focal_point = (fuji_center + bldg_center) / 2
 
         plotter.camera_position = [
-            camera_pos.tolist(),  # カメラ位置
-            fuji_point.tolist(),  # 富士山を注視
-            (0, 0, 1),  # 上方向
+            camera_pos.tolist(),
+            focal_point.tolist(),
+            (0, 0, 1),
         ]
 
-        # 視野角をさらに狭めて望遠レンズのように
-        plotter.camera.view_angle = 20.0  # より望遠
+        # 視野角
+        plotter.camera.view_angle = 50.0
 
-        # クリッピング範囲を設定（手前の建物から遠くの富士山まで）
-        plotter.camera.clipping_range = (50, 200000)
+        # クリッピング範囲
+        plotter.camera.clipping_range = (100, 200000)
 
-        logger.info("カメラ視点: 建物の間から富士山を見上げる（望遠レンズ）")
+        logger.info("カメラ視点: 建物の背後から富士山方向を見る")
         logger.info(
             f"  カメラ位置: X={camera_pos[0]:.0f}, Y={camera_pos[1]:.0f}, Z={camera_pos[2]:.0f}m"
         )
-        logger.info(
-            f"  注視点: 富士山 (約{np.linalg.norm(fuji_point - solacity_pos) / 1000:.0f}km先)"
-        )
-        logger.info(f"  視野角: 20度（望遠レンズ）、クリッピング範囲: 50m〜200km")
+        logger.info(f"  注視点(中間): X={focal_point[0]:.0f}, Y={focal_point[1]:.0f}, Z={focal_point[2]:.0f}m")
+        logger.info(f"  視野角: 50度、クリッピング範囲: 100m〜200km")
     elif terrain is not None:
         # 地形がある場合は広域表示
         center = terrain.center
@@ -406,8 +413,8 @@ def main() -> None:
     points = buildings.points.copy()
     points[:, 0] *= 100000  # X (緯度) を100,000倍
     points[:, 1] *= 100000  # Y (経度) を100,000倍
-    # Z（高さ）を10倍に誇張して、建物が見やすくする
-    height_exaggeration = 10.0
+    # Z（高さ）を30倍に誇張して、建物が見やすくする
+    height_exaggeration = 30.0
     points[:, 2] *= height_exaggeration
     buildings.points = points
     logger.info(
