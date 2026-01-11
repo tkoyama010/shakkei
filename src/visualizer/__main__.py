@@ -224,66 +224,70 @@ def visualize_buildings(
     fuji_point = None
     if terrain is not None:
         logger.info("地形データを追加...")
+        # 地形はterrainカラーマップで標高を色分け
         plotter.add_mesh(
             terrain,
-            cmap="terrain",
-            opacity=0.6,
+            scalars=terrain.points[:, 2],  # Z座標（標高）をスカラー値として使用
+            cmap="terrain",  # terrainカラーマップ（青→緑→黄→茶）
+            opacity=0.8,
             show_edges=False,
             show_scalar_bar=True,
+            clim=[0, 4000],  # カラースケールを0-4000mに設定
         )
 
-        # 富士山の位置にマーカーを追加
-        # 地形の最大標高点を探す
+        # 富士山の位置を検出（マーカーは表示しない）
         max_z_idx = np.argmax(terrain.points[:, 2])
         fuji_point = terrain.points[max_z_idx]
         logger.info(
             f"富士山の位置: X={fuji_point[0]:.0f}, Y={fuji_point[1]:.0f}, Z={fuji_point[2]:.0f}m"
         )
 
-        # 富士山にラベルを追加
-        plotter.add_point_labels(
-            [fuji_point],
-            ["富士山 (3,776m)"],
-            point_size=30,
-            font_size=36,
-            text_color="darkred",
-            point_color="red",
-            bold=True,
-        )
-
-    # 建物を追加
+    # 建物を追加（黄色で表示、地形と明確に差別化）
     plotter.add_mesh(
         buildings,
-        color="lightgray",
-        show_edges=True,
-        edge_color="black",
-        line_width=0.5,
+        color="yellow",  # 明るい黄色
+        show_edges=False,
         opacity=1.0,
-    )
-
-    # 御茶ノ水ソラシティの位置にマーカーを追加
-    solacity_point = np.array([3566615, 13972468, 70])  # 21階相当
-    plotter.add_point_labels(
-        [solacity_point],
-        ["御茶ノ水ソラシティ"],
-        point_size=20,
-        font_size=24,
-        text_color="blue",
-        point_color="blue",
-        bold=True,
     )
 
     # カメラ設定
     if terrain is not None and fuji_point is not None:
-        # ソラシティから富士山を望む視点
-        solacity_pos = [3566615, 13972468, 70]  # ソラシティ21階
-        # カメラはソラシティよりやや上から富士山方向を見る
+        # 建物と富士山の両方が見える視点を設定
+        solacity_pos = np.array([3566615.0, 13972468.0, 700.0])  # ソラシティ位置
+
+        # 建物と富士山の中心をnumpy配列で取得
+        fuji_center = np.array(terrain.center)
+        bldg_center = np.array(buildings.center)
+
+        # 富士山と建物の距離を計算
+        distance = np.linalg.norm(fuji_center - bldg_center)
+        logger.info(f"富士山と建物の距離: {distance / 1000:.1f}km")
+
+        # 建物の背後（北東側）からカメラを配置
+        # 建物が手前、富士山が奥に見える構図
+        camera_pos = bldg_center + np.array([15000, 15000, 5000])
+
+        # 中間点を注視
+        focal_point = (fuji_center + bldg_center) / 2
+
         plotter.camera_position = [
-            (solacity_pos[0] + 5000, solacity_pos[1] + 5000, 2000),  # カメラ位置
-            fuji_point,  # 富士山を注視
-            (0, 0, 1),  # 上方向
+            camera_pos.tolist(),
+            focal_point.tolist(),
+            (0, 0, 1),
         ]
-        logger.info("カメラ視点: ソラシティから富士山を望む")
+
+        # 視野角
+        plotter.camera.view_angle = 50.0
+
+        # クリッピング範囲
+        plotter.camera.clipping_range = (100, 200000)
+
+        logger.info("カメラ視点: 建物の背後から富士山方向を見る")
+        logger.info(
+            f"  カメラ位置: X={camera_pos[0]:.0f}, Y={camera_pos[1]:.0f}, Z={camera_pos[2]:.0f}m"
+        )
+        logger.info(f"  注視点(中間): X={focal_point[0]:.0f}, Y={focal_point[1]:.0f}, Z={focal_point[2]:.0f}m")
+        logger.info(f"  視野角: 50度、クリッピング範囲: 100m〜200km")
     elif terrain is not None:
         # 地形がある場合は広域表示
         center = terrain.center
@@ -396,13 +400,15 @@ def main() -> None:
     points = buildings.points.copy()
     points[:, 0] *= 100000  # X (緯度) を100,000倍
     points[:, 1] *= 100000  # Y (経度) を100,000倍
-    # Z（高さ）はそのまま
+    # Z（高さ）を30倍に誇張して、建物が見やすくする
+    height_exaggeration = 30.0
+    points[:, 2] *= height_exaggeration
     buildings.points = points
     logger.info(
         f"  スケーリング後の範囲: "
         f"X={buildings.bounds[0]:.0f}〜{buildings.bounds[1]:.0f}m, "
         f"Y={buildings.bounds[2]:.0f}〜{buildings.bounds[3]:.0f}m, "
-        f"Z={buildings.bounds[4]:.1f}〜{buildings.bounds[5]:.1f}m"
+        f"Z={buildings.bounds[4]:.1f}〜{buildings.bounds[5]:.1f}m (高さ{height_exaggeration}倍誇張)"
     )
 
     # メッシュを保存（オプション）

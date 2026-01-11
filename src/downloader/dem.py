@@ -141,11 +141,86 @@ def download_dem_from_geovista_pantry(
     return out_dir
 
 
+def generate_wide_area_terrain(
+    output_dir: str = "data/dem", verbose: bool = True
+) -> Path:
+    """
+    千代田区から富士山・筑波山までの広域地形を生成.
+
+    Parameters
+    ----------
+    output_dir : str
+        出力ディレクトリパス
+    verbose : bool
+        進行状況を表示するかどうか
+
+    Returns
+    -------
+    Path
+        生成したデータのパス
+
+    """
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if verbose:
+        logger.info("広域地形データを生成中...")
+
+    # 座標範囲（千代田区〜富士山〜筑波山をカバー）
+    x_min, x_max = 3500000, 3580000  # 80km範囲
+    y_min, y_max = 13850000, 13980000  # 130km範囲
+
+    logger.info(f"  範囲: X={x_min}〜{x_max}m, Y={y_min}〜{y_max}m")
+
+    # グリッド作成（解像度: 1km）
+    x = np.arange(x_min, x_max, 1000)
+    y = np.arange(y_min, y_max, 1000)
+    x_grid, y_grid = np.meshgrid(x, y)
+
+    # 富士山の位置と高さ
+    fuji_x, fuji_y = 3536083, 13872722
+    fuji_height = 3776
+
+    # 筑波山の位置と高さ
+    tsukuba_x, tsukuba_y = 3625600, 14010640
+    tsukuba_height = 877
+
+    # 標高データを生成
+    # 富士山（ガウス分布）
+    dist_from_fuji = np.sqrt((x_grid - fuji_x) ** 2 + (y_grid - fuji_y) ** 2)
+    z_fuji = np.maximum(0, fuji_height * np.exp(-((dist_from_fuji / 30000) ** 2)))
+
+    # 筑波山（ガウス分布）
+    dist_from_tsukuba = np.sqrt((x_grid - tsukuba_x) ** 2 + (y_grid - tsukuba_y) ** 2)
+    z_tsukuba = np.maximum(0, tsukuba_height * np.exp(-((dist_from_tsukuba / 15000) ** 2)))
+
+    # 関東平野（低地：50m）
+    z_plain = 50.0
+
+    # 合成（最大値）
+    z = np.maximum(z_fuji, z_tsukuba)
+    z = np.maximum(z, z_plain)
+
+    logger.info(f"  標高範囲: {z.min():.1f}〜{z.max():.1f}m")
+    logger.info(f"  グリッドサイズ: {z.shape}")
+
+    # PyVista StructuredGrid作成
+    grid = pv.StructuredGrid(x_grid, y_grid, z)
+
+    # 保存
+    output_file = out_dir / "kanto_wide_terrain.vts"
+    grid.save(output_file)
+
+    logger.info(f"✓ 広域地形データを保存: {output_file}")
+
+    return out_dir
+
+
 def download_dem(
     output_dir: str = "data/dem",
     region: str = "kanto",
     verbose: bool = True,
-    use_sample: bool = True,
+    use_sample: bool = False,
 ) -> Path:
     """
     DEMデータをダウンロード.
