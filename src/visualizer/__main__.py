@@ -194,10 +194,12 @@ def load_buildings_from_directory(
 
 
 def visualize_buildings(
-    buildings: pv.PolyData, screenshot_path: Path | None = None
+    buildings: pv.PolyData,
+    screenshot_path: Path | None = None,
+    terrain: pv.StructuredGrid | None = None,
 ) -> None:
     """
-    建物メッシュをPyVistaで可視化.
+    建物メッシュと地形をPyVistaで可視化.
 
     Parameters
     ----------
@@ -205,6 +207,8 @@ def visualize_buildings(
         建物メッシュ
     screenshot_path : Path | None
         スクリーンショット保存先（Noneの場合はインタラクティブ表示）
+    terrain : pv.StructuredGrid | None
+        地形データ（オプション）
 
     """
     logger.info("PyVistaで可視化中...")
@@ -215,21 +219,88 @@ def visualize_buildings(
     plotter = pv.Plotter(
         off_screen=off_screen, window_size=[1920, 1080] if off_screen else None
     )
+
+    # 地形を追加（オプション）
+    fuji_point = None
+    if terrain is not None:
+        logger.info("地形データを追加...")
+        plotter.add_mesh(
+            terrain,
+            cmap="terrain",
+            opacity=0.6,
+            show_edges=False,
+            show_scalar_bar=True,
+        )
+
+        # 富士山の位置にマーカーを追加
+        # 地形の最大標高点を探す
+        max_z_idx = np.argmax(terrain.points[:, 2])
+        fuji_point = terrain.points[max_z_idx]
+        logger.info(
+            f"富士山の位置: X={fuji_point[0]:.0f}, Y={fuji_point[1]:.0f}, Z={fuji_point[2]:.0f}m"
+        )
+
+        # 富士山にラベルを追加
+        plotter.add_point_labels(
+            [fuji_point],
+            ["富士山 (3,776m)"],
+            point_size=30,
+            font_size=36,
+            text_color="darkred",
+            point_color="red",
+            bold=True,
+        )
+
+    # 建物を追加
     plotter.add_mesh(
         buildings,
-        color="white",
+        color="lightgray",
         show_edges=True,
-        edge_color="gray",
-        line_width=0.3,
+        edge_color="black",
+        line_width=0.5,
+        opacity=1.0,
     )
 
-    # カメラ設定（斜め上から）
-    center = buildings.center
-    plotter.camera_position = [
-        (center[0] - 1500, center[1] - 1500, 500),  # カメラ位置
-        center,  # 注視点
-        (0, 0, 1),  # 上方向
-    ]
+    # 御茶ノ水ソラシティの位置にマーカーを追加
+    solacity_point = np.array([3566615, 13972468, 70])  # 21階相当
+    plotter.add_point_labels(
+        [solacity_point],
+        ["御茶ノ水ソラシティ"],
+        point_size=20,
+        font_size=24,
+        text_color="blue",
+        point_color="blue",
+        bold=True,
+    )
+
+    # カメラ設定
+    if terrain is not None and fuji_point is not None:
+        # ソラシティから富士山を望む視点
+        solacity_pos = [3566615, 13972468, 70]  # ソラシティ21階
+        # カメラはソラシティよりやや上から富士山方向を見る
+        plotter.camera_position = [
+            (solacity_pos[0] + 5000, solacity_pos[1] + 5000, 2000),  # カメラ位置
+            fuji_point,  # 富士山を注視
+            (0, 0, 1),  # 上方向
+        ]
+        logger.info("カメラ視点: ソラシティから富士山を望む")
+    elif terrain is not None:
+        # 地形がある場合は広域表示
+        center = terrain.center
+        plotter.camera_position = [
+            (center[0] - 30000, center[1] - 30000, 10000),
+            center,
+            (0, 0, 1),
+        ]
+    else:
+        # 建物のみの場合
+        center = buildings.center
+        plotter.camera_position = [
+            (center[0] - 1500, center[1] - 1500, 500),
+            center,
+            (0, 0, 1),
+        ]
+
     plotter.add_axes()
 
     if screenshot_path:
@@ -272,6 +343,12 @@ def main() -> None:
         "--output",
         type=Path,
         help="メッシュをファイルに保存する場合のパス (.vtp形式)",
+    )
+    parser.add_argument(
+        "-t",
+        "--terrain",
+        type=Path,
+        help="地形データファイル (.vts形式)",
     )
     parser.add_argument(
         "-s",
@@ -334,8 +411,20 @@ def main() -> None:
         buildings.save(args.output)
         logger.info("✓ 保存完了")
 
+    # 地形データを読み込み（オプション）
+    terrain = None
+    if args.terrain:
+        if args.terrain.exists():
+            logger.info(f"地形データを読み込み中: {args.terrain}")
+            terrain = pv.read(args.terrain)
+            logger.info(f"  地形範囲: Z={terrain.bounds[4]:.0f}〜{terrain.bounds[5]:.0f}m")
+        else:
+            logger.warning(f"地形データが見つかりません: {args.terrain}")
+            logger.info("先に以下のコマンドでDEMデータを生成してください:")
+            logger.info("  uv run python -c 'from src.downloader.dem import download_dem; download_dem()'")
+
     # PyVistaで可視化
-    visualize_buildings(buildings, args.screenshot)
+    visualize_buildings(buildings, args.screenshot, terrain)
 
 
 if __name__ == "__main__":
