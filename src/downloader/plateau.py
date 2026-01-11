@@ -1,18 +1,15 @@
 """
-PLATEAUデータのダウンロード
+PLATEAUデータのダウンロード.
 
 千代田区の建物データをG空間情報センターのCKAN APIから取得します。
 """
 
-import json
 import logging
 import zipfile
 from pathlib import Path
-from typing import Optional, Dict, List
 
 import requests
 from tqdm import tqdm
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +17,9 @@ logger = logging.getLogger(__name__)
 CKAN_API_BASE = "https://www.geospatial.jp/ckan/api/3/action"
 
 
-def get_dataset_resources(dataset_id: str) -> List[Dict]:
+def get_dataset_resources(dataset_id: str) -> list[dict]:
     """
-    CKANデータセットからリソース情報を取得
+    CKANデータセットからリソース情報を取得.
 
     Parameters
     ----------
@@ -44,18 +41,17 @@ def get_dataset_resources(dataset_id: str) -> List[Dict]:
 
         if data.get("success"):
             return data["result"]["resources"]
-        else:
-            logger.error(f"CKAN API エラー: {data.get('error', 'Unknown error')}")
-            return []
+        logger.error(f"CKAN API エラー: {data.get('error', 'Unknown error')}")
+        return []
 
     except Exception as e:
-        logger.error(f"データセット情報の取得に失敗: {e}")
+        logger.exception(f"データセット情報の取得に失敗: {e}")
         return []
 
 
-def find_citygml_resource(resources: List[Dict]) -> Optional[Dict]:
+def find_citygml_resource(resources: list[dict]) -> dict | None:
     """
-    CityGML形式の建物データリソースを検索
+    CityGML形式の建物データリソースを検索.
 
     Parameters
     ----------
@@ -72,16 +68,18 @@ def find_citygml_resource(resources: List[Dict]) -> Optional[Dict]:
 
     logger.debug(f"ZIP形式のリソース数: {len(zip_resources)}")
     for i, r in enumerate(zip_resources, 1):
-        logger.debug(f"  {i}. name='{r.get('name', 'N/A')}', desc='{r.get('description', 'N/A')[:50]}'")
+        logger.debug(
+            f"  {i}. name='{r.get('name', 'N/A')}', desc='{r.get('description', 'N/A')[:50]}'"
+        )
 
     # 優先順位付きのキーワード検索
     priority_patterns = [
         # パターン1: 具体的なファイル名
         ["bldg", "citygml", "lod2"],  # 建物、CityGML、LOD2
         ["bldg", "citygml", "lod1"],  # 建物、CityGML、LOD1
-        ["bldg", "citygml"],           # 建物、CityGML
+        ["bldg", "citygml"],  # 建物、CityGML
         # パターン2: シンプルなCityGML
-        ["citygml"],                   # CityGML（シンプルマッチ）
+        ["citygml"],  # CityGML（シンプルマッチ）
     ]
 
     for pattern in priority_patterns:
@@ -91,7 +89,15 @@ def find_citygml_resource(resources: List[Dict]) -> Optional[Dict]:
             description = resource.get("description", "").lower()
 
             # 除外キーワード（建物以外のデータ）
-            exclude_keywords = ["3d tiles", "mvt", "terrain", "dem", "texture", "関連データセット", "索引図"]
+            exclude_keywords = [
+                "3d tiles",
+                "mvt",
+                "terrain",
+                "dem",
+                "texture",
+                "関連データセット",
+                "索引図",
+            ]
             if any(ex in name for ex in exclude_keywords):
                 logger.debug(f"  除外: {name} (除外キーワードマッチ)")
                 continue
@@ -115,12 +121,12 @@ def find_citygml_resource(resources: List[Dict]) -> Optional[Dict]:
 
 def download_plateau(
     output_dir: str = "data/plateau/ochanomizu",
-    bbox: Optional[tuple] = None,
+    bbox: tuple | None = None,
     verbose: bool = True,
-    dataset_id: str = "plateau-13101-chiyoda-ku-2023"
+    dataset_id: str = "plateau-13101-chiyoda-ku-2023",
 ) -> Path:
     """
-    PLATEAUの建物データをG空間情報センターCKAN APIからダウンロード
+    PLATEAUの建物データをG空間情報センターCKAN APIからダウンロード.
 
     Parameters
     ----------
@@ -148,7 +154,7 @@ def download_plateau(
         delta = 0.01  # 約1km
         bbox = (lon - delta, lat - delta, lon + delta, lat + delta)
 
-    logger.info(f"PLATEAUデータをダウンロード中...")
+    logger.info("PLATEAUデータをダウンロード中...")
     logger.info(f"  データセット: {dataset_id}")
     logger.info(f"  範囲: {bbox}")
     logger.info(f"  出力先: {out_dir}")
@@ -196,11 +202,13 @@ def download_plateau(
         response = requests.get(download_url, stream=True, timeout=120)
         response.raise_for_status()
 
-        total_size = int(response.headers.get('content-length', 0))
+        total_size = int(response.headers.get("content-length", 0))
 
-        with open(zip_path, 'wb') as f:
+        with open(zip_path, "wb") as f:
             if verbose and total_size > 0:
-                with tqdm(total=total_size, unit='B', unit_scale=True, desc="ダウンロード中") as pbar:
+                with tqdm(
+                    total=total_size, unit="B", unit_scale=True, desc="ダウンロード中"
+                ) as pbar:
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:
                             f.write(chunk)
@@ -214,7 +222,7 @@ def download_plateau(
 
         # ZIPファイルの展開
         logger.info("ZIPファイルを展開中...")
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(out_dir)
 
         logger.info(f"展開完了: {out_dir}")
@@ -227,17 +235,17 @@ def download_plateau(
         logger.info("✓ PLATEAUデータのダウンロードが完了しました")
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"ダウンロードエラー: {e}")
+        logger.exception(f"ダウンロードエラー: {e}")
         if zip_path.exists():
             zip_path.unlink()
         _show_manual_download_instructions(out_dir, dataset_id)
     except zipfile.BadZipFile as e:
-        logger.error(f"ZIPファイルの展開エラー: {e}")
+        logger.exception(f"ZIPファイルの展開エラー: {e}")
         if zip_path.exists():
             zip_path.unlink()
         _show_manual_download_instructions(out_dir, dataset_id)
     except Exception as e:
-        logger.error(f"予期しないエラー: {e}")
+        logger.exception(f"予期しないエラー: {e}")
         if zip_path.exists():
             zip_path.unlink()
         raise
@@ -246,7 +254,7 @@ def download_plateau(
 
 
 def _show_manual_download_instructions(out_dir: Path, dataset_id: str) -> None:
-    """手動ダウンロード手順を表示"""
+    """手動ダウンロード手順を表示."""
     logger.info("")
     logger.info("=" * 60)
     logger.info("=== PLATEAUデータ 手動ダウンロード手順 ===")

@@ -1,5 +1,5 @@
 """
-ダウンローダーモジュールのCLIエントリーポイント
+ダウンローダーモジュールのCLIエントリーポイント.
 
 使用方法:
     python -m src.downloader
@@ -10,12 +10,11 @@ import logging
 
 from .plateau import download_plateau
 
-
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """メインエントリーポイント"""
+def main() -> None:
+    """メインエントリーポイント."""
     parser = argparse.ArgumentParser(
         prog="python -m src.downloader",
         description="PLATEAUとDEMデータをダウンロード",
@@ -23,23 +22,16 @@ def main():
     )
 
     parser.add_argument(
-        "-o", "--output",
-        default="data/plateau/ochanomizu",
-        help="出力ディレクトリ"
+        "-o", "--output", default="data/plateau/ochanomizu", help="出力ディレクトリ"
     )
-    parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="詳細な出力"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="詳細な出力")
 
     args = parser.parse_args()
 
     # ログレベルの設定
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
-        level=log_level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
     logger.info("ダウンローダーモジュールを実行")
@@ -48,7 +40,7 @@ def main():
     try:
         download_plateau(output_dir=args.output, verbose=args.verbose)
     except Exception as e:
-        logger.error(f"ダウンロードに失敗しました: {e}")
+        logger.exception(f"ダウンロードに失敗しました: {e}")
         raise
 
 

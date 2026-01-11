@@ -44,6 +44,7 @@ dev = [
     "flake8>=6.1.0",
     "mypy>=1.5.0",
     "isort>=5.12.0",
+    "ruff>=0.8.0",
 ]
 notebook = [
     "jupyter>=1.0.0",
@@ -81,3 +82,99 @@ disallow_untyped_defs = true
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-v --cov=src --cov-report=term-missing"
+
+[tool.ruff]
+# Python version
+target-version = "py310"
+
+# Line length
+line-length = 88
+
+# Enable all rules
+select = ["ALL"]
+
+# Files to exclude
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pycache__",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+[tool.ruff.lint]
+# Enable all rules
+select = ["ALL"]
+
+# Ignore rules that conflict with formatter or are too strict for this project
+ignore = [
+    "D203",    # one-blank-line-before-class (conflicts with D211)
+    "D213",    # multi-line-summary-second-line (conflicts with D212)
+    "COM812",  # missing-trailing-comma (conflicts with formatter)
+    "ISC001",  # single-line-implicit-string-concatenation (conflicts with formatter)
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"
+
+# Respect magic trailing comma
+skip-magic-trailing-comma = false
+
+# Auto-detect line ending
+line-ending = "auto"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.11",
+]
+
+[tool.ruff.lint.pydocstyle]
+# Use NumPy docstring convention
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*.py" = [
+    "S101",    # assert
+    "PLR2004", # magic-value-comparison
+    "ANN",     # type annotations
+]
+
+# __init__.py files can have unused imports
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]

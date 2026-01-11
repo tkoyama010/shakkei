@@ -1,5 +1,5 @@
 """
-DEMデータのダウンロード
+DEMデータのダウンロード.
 
 国土地理院の基盤地図情報から標高データを取得します。
 """
@@ -7,17 +7,14 @@ DEMデータのダウンロード
 import logging
 from pathlib import Path
 
-
 logger = logging.getLogger(__name__)
 
 
 def download_dem(
-    output_dir: str = "data/dem",
-    region: str = "kanto",
-    verbose: bool = True
+    output_dir: str = "data/dem", region: str = "kanto", verbose: bool = True
 ) -> Path:
     """
-    国土地理院のDEMデータをダウンロード
+    国土地理院のDEMデータをダウンロード.
 
     Parameters
     ----------
@@ -36,7 +33,7 @@ def download_dem(
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"DEMデータをダウンロード中...")
+    logger.info("DEMデータをダウンロード中...")
     logger.info(f"  地域: {region}")
     logger.info(f"  出力先: {out_dir}")
 
@@ -44,6 +41,6 @@ def download_dem(
     # 現在はスタブ実装
     logger.warning("[スタブ] DEMデータのダウンロードは未実装です")
     logger.info("国土地理院の基盤地図情報から手動でダウンロードしてください")
-    logger.info(f"参考: https://fgd.gsi.go.jp/")
+    logger.info("参考: https://fgd.gsi.go.jp/")
 
     return out_dir
