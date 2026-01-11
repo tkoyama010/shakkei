@@ -193,7 +193,9 @@ def load_buildings_from_directory(
     return combined
 
 
-def visualize_buildings(buildings: pv.PolyData) -> None:
+def visualize_buildings(
+    buildings: pv.PolyData, screenshot_path: Path | None = None
+) -> None:
     """
     建物メッシュをPyVistaで可視化.
 
@@ -201,29 +203,47 @@ def visualize_buildings(buildings: pv.PolyData) -> None:
     ----------
     buildings : pv.PolyData
         建物メッシュ
+    screenshot_path : Path | None
+        スクリーンショット保存先（Noneの場合はインタラクティブ表示）
 
     """
     logger.info("PyVistaで可視化中...")
-    plotter = pv.Plotter()
+
+    # オフスクリーンモード判定
+    off_screen = screenshot_path is not None
+
+    plotter = pv.Plotter(
+        off_screen=off_screen, window_size=[1920, 1080] if off_screen else None
+    )
     plotter.add_mesh(
         buildings,
-        color="lightgray",
-        show_edges=False,
-        smooth_shading=True,
-        specular=0.2,
+        color="white",
+        show_edges=True,
+        edge_color="gray",
+        line_width=0.3,
     )
 
-    # カメラ設定
-    plotter.camera_position = "xy"
+    # カメラ設定（斜め上から）
+    center = buildings.center
+    plotter.camera_position = [
+        (center[0] - 1500, center[1] - 1500, 500),  # カメラ位置
+        center,  # 注視点
+        (0, 0, 1),  # 上方向
+    ]
     plotter.add_axes()
-    plotter.show_grid()
 
-    logger.info("✓ 可視化ウィンドウを表示します")
-    logger.info("  - マウスドラッグ: 回転")
-    logger.info("  - ホイール: ズーム")
-    logger.info("  - q: 終了")
-
-    plotter.show()
+    if screenshot_path:
+        # スクリーンショット保存
+        logger.info(f"スクリーンショット保存中: {screenshot_path}")
+        plotter.screenshot(str(screenshot_path))
+        logger.info("✓ 画像を保存しました")
+    else:
+        # インタラクティブ表示
+        logger.info("✓ 可視化ウィンドウを表示します")
+        logger.info("  - マウスドラッグ: 回転")
+        logger.info("  - ホイール: ズーム")
+        logger.info("  - q: 終了")
+        plotter.show()
 
 
 def main() -> None:
@@ -252,6 +272,12 @@ def main() -> None:
         "--output",
         type=Path,
         help="メッシュをファイルに保存する場合のパス (.vtp形式)",
+    )
+    parser.add_argument(
+        "-s",
+        "--screenshot",
+        type=Path,
+        help="スクリーンショットを保存する場合のパス (.png形式)",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="詳細な出力")
 
@@ -288,6 +314,20 @@ def main() -> None:
     buildings.translate([0, 0, -z_min], inplace=True)
     logger.info(f"  Z座標オフセット: {-z_min:.2f}m")
 
+    # 座標スケーリング（緯度経度→メートル相当）
+    logger.info("座標をスケーリング中...")
+    points = buildings.points.copy()
+    points[:, 0] *= 100000  # X (緯度) を100,000倍
+    points[:, 1] *= 100000  # Y (経度) を100,000倍
+    # Z（高さ）はそのまま
+    buildings.points = points
+    logger.info(
+        f"  スケーリング後の範囲: "
+        f"X={buildings.bounds[0]:.0f}〜{buildings.bounds[1]:.0f}m, "
+        f"Y={buildings.bounds[2]:.0f}〜{buildings.bounds[3]:.0f}m, "
+        f"Z={buildings.bounds[4]:.1f}〜{buildings.bounds[5]:.1f}m"
+    )
+
     # メッシュを保存（オプション）
     if args.output:
         logger.info(f"メッシュを保存中: {args.output}")
@@ -295,7 +335,7 @@ def main() -> None:
         logger.info("✓ 保存完了")
 
     # PyVistaで可視化
-    visualize_buildings(buildings)
+    visualize_buildings(buildings, args.screenshot)
 
 
 if __name__ == "__main__":
