@@ -224,12 +224,14 @@ def visualize_buildings(
     fuji_point = None
     if terrain is not None:
         logger.info("地形データを追加...")
+        # 地形は茶色系で表示（富士山を強調）
         plotter.add_mesh(
             terrain,
-            cmap="terrain",
-            opacity=0.6,
+            cmap="gist_earth",  # 茶色〜緑の地形カラーマップ
+            opacity=0.8,
             show_edges=False,
             show_scalar_bar=True,
+            clim=[0, 4000],  # カラースケールを0-4000mに設定
         )
 
         # 富士山の位置にマーカーを追加
@@ -243,47 +245,51 @@ def visualize_buildings(
         # 富士山にラベルを追加
         plotter.add_point_labels(
             [fuji_point],
-            ["富士山 (3,776m)"],
-            point_size=30,
-            font_size=36,
-            text_color="darkred",
+            ["富士山"],
+            point_size=40,
+            font_size=48,
+            text_color="white",
             point_color="red",
             bold=True,
+            shadow=True,
         )
 
-    # 建物を追加
+    # 建物を追加（青灰色で表示、地形と差別化）
     plotter.add_mesh(
         buildings,
-        color="lightgray",
+        color="steelblue",  # 青灰色
         show_edges=True,
-        edge_color="black",
-        line_width=0.5,
+        edge_color="navy",
+        line_width=0.3,
         opacity=1.0,
-    )
-
-    # 御茶ノ水ソラシティの位置にマーカーを追加
-    solacity_point = np.array([3566615, 13972468, 70])  # 21階相当
-    plotter.add_point_labels(
-        [solacity_point],
-        ["御茶ノ水ソラシティ"],
-        point_size=20,
-        font_size=24,
-        text_color="blue",
-        point_color="blue",
-        bold=True,
     )
 
     # カメラ設定
     if terrain is not None and fuji_point is not None:
-        # ソラシティから富士山を望む視点
-        solacity_pos = [3566615, 13972468, 70]  # ソラシティ21階
-        # カメラはソラシティよりやや上から富士山方向を見る
+        # ソラシティ21階から富士山を望む視点
+        # 建物の高さを10倍に誇張しているので、カメラの高さも調整
+        solacity_pos = np.array([3566615.0, 13972468.0, 700.0])  # 21階×10 = 約700m
+
         plotter.camera_position = [
-            (solacity_pos[0] + 5000, solacity_pos[1] + 5000, 2000),  # カメラ位置
-            fuji_point,  # 富士山を注視
+            solacity_pos.tolist(),  # カメラ位置（ソラシティ21階相当）
+            fuji_point.tolist(),  # 富士山を注視
             (0, 0, 1),  # 上方向
         ]
-        logger.info("カメラ視点: ソラシティから富士山を望む")
+
+        # 視野角を調整
+        plotter.camera.view_angle = 60.0  # 適度な広角
+
+        # クリッピング範囲を設定（手前1mから200kmまで表示）
+        plotter.camera.clipping_range = (1, 200000)
+
+        logger.info("カメラ視点: 御茶ノ水ソラシティ21階（誇張後700m）から富士山を望む")
+        logger.info(
+            f"  カメラ位置: X={solacity_pos[0]:.0f}, Y={solacity_pos[1]:.0f}, Z={solacity_pos[2]:.0f}m"
+        )
+        logger.info(
+            f"  注視点: 富士山 (約{np.linalg.norm(fuji_point - solacity_pos) / 1000:.0f}km先)"
+        )
+        logger.info(f"  視野角: 60度、クリッピング範囲: 1m〜200km")
     elif terrain is not None:
         # 地形がある場合は広域表示
         center = terrain.center
@@ -396,13 +402,15 @@ def main() -> None:
     points = buildings.points.copy()
     points[:, 0] *= 100000  # X (緯度) を100,000倍
     points[:, 1] *= 100000  # Y (経度) を100,000倍
-    # Z（高さ）はそのまま
+    # Z（高さ）を10倍に誇張して、建物が見やすくする
+    height_exaggeration = 10.0
+    points[:, 2] *= height_exaggeration
     buildings.points = points
     logger.info(
         f"  スケーリング後の範囲: "
         f"X={buildings.bounds[0]:.0f}〜{buildings.bounds[1]:.0f}m, "
         f"Y={buildings.bounds[2]:.0f}〜{buildings.bounds[3]:.0f}m, "
-        f"Z={buildings.bounds[4]:.1f}〜{buildings.bounds[5]:.1f}m"
+        f"Z={buildings.bounds[4]:.1f}〜{buildings.bounds[5]:.1f}m (高さ{height_exaggeration}倍誇張)"
     )
 
     # メッシュを保存（オプション）
