@@ -39,8 +39,8 @@ def main() -> None:
     # PLATEAUデータのダウンロード
     try:
         download_plateau(output_dir=args.output, verbose=args.verbose)
-    except Exception as e:
-        logger.exception(f"ダウンロードに失敗しました: {e}")
+    except Exception:
+        logger.exception("ダウンロードに失敗しました")
         raise
 
 
