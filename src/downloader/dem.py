@@ -33,14 +33,17 @@ def download_dem(
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info("DEMデータをダウンロード中...")
-    logger.info(f"  地域: {region}")
-    logger.info(f"  出力先: {out_dir}")
+    if verbose:
+        logger.info("DEMデータをダウンロード中...")
+        logger.info(f"  地域: {region}")
+        logger.info(f"  出力先: {out_dir}")
 
     # TODO: 国土地理院APIを使用した実装
     # 現在はスタブ実装
     logger.warning("[スタブ] DEMデータのダウンロードは未実装です")
-    logger.info("国土地理院の基盤地図情報から手動でダウンロードしてください")
-    logger.info("参考: https://fgd.gsi.go.jp/")
+
+    if verbose:
+        logger.info("国土地理院の基盤地図情報から手動でダウンロードしてください")
+        logger.info("参考: https://fgd.gsi.go.jp/")
 
     return out_dir

@@ -44,8 +44,8 @@ def get_dataset_resources(dataset_id: str) -> list[dict]:
         logger.error(f"CKAN API エラー: {data.get('error', 'Unknown error')}")
         return []
 
-    except Exception as e:
-        logger.exception(f"データセット情報の取得に失敗: {e}")
+    except Exception:
+        logger.exception("データセット情報の取得に失敗")
         return []
 
 
@@ -68,18 +68,17 @@ def find_citygml_resource(resources: list[dict]) -> dict | None:
 
     logger.debug(f"ZIP形式のリソース数: {len(zip_resources)}")
     for i, r in enumerate(zip_resources, 1):
-        logger.debug(
-            f"  {i}. name='{r.get('name', 'N/A')}', desc='{r.get('description', 'N/A')[:50]}'"
-        )
+        name = r.get("name", "N/A")
+        desc = r.get("description", "N/A")[:50]
+        logger.debug(f"  {i}. name='{name}', desc='{desc}'")
 
     # 優先順位付きのキーワード検索
+    # 具体的なファイル名パターンから順に検索し、最適なリソースを見つける
     priority_patterns = [
-        # パターン1: 具体的なファイル名
         ["bldg", "citygml", "lod2"],  # 建物、CityGML、LOD2
         ["bldg", "citygml", "lod1"],  # 建物、CityGML、LOD1
         ["bldg", "citygml"],  # 建物、CityGML
-        # パターン2: シンプルなCityGML
-        ["citygml"],  # CityGML（シンプルマッチ）
+        ["citygml"],  # CityGML単体マッチ
     ]
 
     for pattern in priority_patterns:
@@ -148,7 +147,7 @@ def download_plateau(
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # デフォルトbbox: 御茶ノ水ソラシティ周辺
+    # bboxが指定されていない場合、御茶ノ水ソラシティ周辺をデフォルトとする
     if bbox is None:
         lat, lon = 35.6996, 139.7645
         delta = 0.01  # 約1km
@@ -204,7 +203,7 @@ def download_plateau(
 
         total_size = int(response.headers.get("content-length", 0))
 
-        with open(zip_path, "wb") as f:
+        with zip_path.open("wb") as f:
             if verbose and total_size > 0:
                 with tqdm(
                     total=total_size, unit="B", unit_scale=True, desc="ダウンロード中"
@@ -234,18 +233,18 @@ def download_plateau(
 
         logger.info("✓ PLATEAUデータのダウンロードが完了しました")
 
-    except requests.exceptions.RequestException as e:
-        logger.exception(f"ダウンロードエラー: {e}")
+    except requests.exceptions.RequestException:
+        logger.exception("ダウンロードエラー")
         if zip_path.exists():
             zip_path.unlink()
         _show_manual_download_instructions(out_dir, dataset_id)
-    except zipfile.BadZipFile as e:
-        logger.exception(f"ZIPファイルの展開エラー: {e}")
+    except zipfile.BadZipFile:
+        logger.exception("ZIPファイルの展開エラー")
         if zip_path.exists():
             zip_path.unlink()
         _show_manual_download_instructions(out_dir, dataset_id)
-    except Exception as e:
-        logger.exception(f"予期しないエラー: {e}")
+    except Exception:
+        logger.exception("予期しないエラー")
         if zip_path.exists():
             zip_path.unlink()
         raise
