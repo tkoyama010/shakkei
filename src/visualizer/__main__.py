@@ -235,24 +235,11 @@ def visualize_buildings(
             clim=[0, 4000],  # カラースケールを0-4000mに設定
         )
 
-        # 富士山の位置にマーカーを追加
-        # 地形の最大標高点を探す
+        # 富士山の位置を検出（マーカーは表示しない）
         max_z_idx = np.argmax(terrain.points[:, 2])
         fuji_point = terrain.points[max_z_idx]
         logger.info(
             f"富士山の位置: X={fuji_point[0]:.0f}, Y={fuji_point[1]:.0f}, Z={fuji_point[2]:.0f}m"
-        )
-
-        # 富士山にラベルを追加
-        plotter.add_point_labels(
-            [fuji_point],
-            ["富士山"],
-            point_size=40,
-            font_size=48,
-            text_color="white",
-            point_color="red",
-            bold=True,
-            shadow=True,
         )
 
     # 建物を追加（黄色で表示、地形と明確に差別化）
