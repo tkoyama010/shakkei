@@ -8,6 +8,8 @@
 import argparse
 import logging
 
+from .plateau import download_plateau
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +43,13 @@ def main():
     )
 
     logger.info("ダウンローダーモジュールを実行")
-    logger.info(f"出力先: {args.output}")
-    logger.warning("[スタブ] PLATEAUデータのダウンロードは未実装です")
+
+    # PLATEAUデータのダウンロード
+    try:
+        download_plateau(output_dir=args.output, verbose=args.verbose)
+    except Exception as e:
+        logger.error(f"ダウンロードに失敗しました: {e}")
+        raise
 
 
 if __name__ == "__main__":
