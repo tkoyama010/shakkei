@@ -34,6 +34,7 @@ dependencies = [
     "rioxarray>=0.15.0",
     "requests>=2.31.0",
     "tqdm>=4.66.0",
+    "geovista>=0.5.3",
 ]
 
 [project.optional-dependencies]
